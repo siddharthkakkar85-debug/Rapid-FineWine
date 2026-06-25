@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RapidFineWine — Live Basket</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --navy: #1A3A6B;
+    --gold: #C9A84C;
+    --gold-lt: #E8D5A3;
+    --gold-dk: #8B6914;
+    --ink: #1A1614;
+    --ink2: #3D3530;
+    --ink3: #6B5F58;
+    --surface: #FAFAF8;
+    --surface2: #F3F0EA;
+    --surface3: #EAE5DA;
+    --border: rgba(201,168,76,0.2);
+    --border2: rgba(201,168,76,0.4);
+    --red: #8B1E2F;
+    --teal: #0B5C52;
+    --success: #2D6A4F;
+    --warn: #8B4513;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--surface); color: var(--ink); min-height: 100vh; }
+
+  /* NAV */
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; border-bottom: 1px solid var(--border2); background: var(--surface); }
+  .nav-brand { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; letter-spacing: .06em; color: var(--gold); }
+  .nav-sub { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink3); font-family: 'Inter', sans-serif; }
+  .nav-badge { font-size: 10px; padding: 3px 10px; border-radius: 20px; background: rgba(139,30,47,0.1); color: var(--red); border: 1px solid rgba(139,30,47,0.2); letter-spacing: .05em; }
+
+  /* LAYOUT */
+  .layout { display: grid; grid-template-columns: 1fr 400px; gap: 0; min-height: calc(100vh - 57px); }
+
+  /* CATALOGUE PANEL */
+  .catalogue { padding: 24px 28px; border-right: 1px solid var(--border); overflow-y: auto; }
+  .panel-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .panel-sub { font-size: 12px; color: var(--ink3); margin-bottom: 20px; }
+
+  .sku-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; transition: border-color .15s; }
+  .sku-card:hover { border-color: var(--border2); }
+  .sku-swatch { width: 40px; height: 40px; border-radius: var(--radius); display: flex; align-items: center; justify-content: font-size; font-size: 18px; align-items: center; justify-content: center; flex-shrink: 0; }
+  .sku-info { flex: 1; min-width: 0; }
+  .sku-name { font-weight: 600; font-size: 13px; color: var(--ink); }
+  .sku-meta { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+  .sku-price { font-size: 13px; font-weight: 600; color: var(--gold-dk); text-align: right; white-space: nowrap; }
+  .sku-price-sub { font-size: 10px; color: var(--ink3); margin-top: 1px; }
+  .qty-ctrl { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .qty-btn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--ink2); transition: all .15s; line-height: 1; }
+  .qty-btn:hover { background: var(--surface2); border-color: var(--gold); }
+  .qty-val { font-size: 13px; font-weight: 600; min-width: 20px; text-align: center; color: var(--ink); }
+  .carton-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 6px; border-radius: 3px; background: var(--surface2); color: var(--ink3); border: 1px solid var(--border); margin-top: 3px; }
+
+  /* BASKET PANEL */
+  .basket { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; height: calc(100vh - 57px); position: sticky; top: 57px; }
+  .basket-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+  .basket-title { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; color: var(--ink); display: flex; align-items: center; justify-content: space-between; }
+  .basket-count { font-size: 11px; font-family: 'Inter', sans-serif; font-weight: 500; padding: 2px 8px; border-radius: 20px; background: var(--gold); color: #fff; }
+
+  .basket-body { flex: 1; overflow-y: auto; padding: 14px 20px; }
+  .basket-body::-webkit-scrollbar { width: 3px; }
+  .basket-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* PALLET VISUALISER */
+  .pallet-section { margin-bottom: 16px; }
+  .pallet-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .pallet-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .pallet-wrap { display: flex; gap: 10px; margin-bottom: 10px; }
+  .pallet-viz { flex: 1; }
+  .pallet-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: var(--surface2); }
+  .pallet-num { font-size: 10px; color: var(--ink3); margin-bottom: 6px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+
+  /* LAYER STACK */
+  .layer-stack { width: 100%; }
+  .pallet-base { height: 12px; background: linear-gradient(135deg, #D4C9B8, #C4B9A8); border-radius: 3px 3px 0 0; border: 1px solid rgba(0,0,0,.1); margin-bottom: 2px; display: flex; align-items: center; justify-content: center; }
+  .pallet-base-label { font-size: 8px; color: rgba(0,0,0,.4); letter-spacing: .04em; }
+  .layer-row { display: flex; gap: 2px; margin-bottom: 2px; align-items: stretch; }
+  .case-block { border-radius: 2px; border: 1px solid rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; font-size: 7px; color: rgba(0,0,0,.45); font-weight: 600; letter-spacing: .03em; overflow: hidden; white-space: nowrap; transition: all .3s; }
+  .empty-label { font-size: 11px; color: var(--ink3); text-align: center; padding: 16px 0; font-style: italic; }
+
+  /* HEIGHT & WEIGHT METERS */
+  .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .meter { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; }
+  .meter-label { font-size: 10px; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-weight: 600; }
+  .meter-bar-track { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+  .meter-bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease, background .3s; }
+  .meter-val { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .meter-max { font-size: 10px; color: var(--ink3); }
+  .meter-warn { color: var(--warn); }
+  .meter-ok { color: var(--success); }
+
+  /* BASKET ITEMS */
+  .basket-items { margin-bottom: 14px; }
+  .basket-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .basket-item:last-child { border: none; }
+  .bi-name { color: var(--ink2); font-weight: 500; }
+  .bi-detail { color: var(--ink3); font-size: 11px; }
+  .bi-price { font-weight: 600; color: var(--gold-dk); text-align: right; }
+  .empty-basket { font-size: 12px; color: var(--ink3); text-align: center; padding: 20px 0; font-style: italic; }
+
+  /* FREIGHT SUMMARY */
+  .freight-summary { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 12px; }
+  .fs-row { display: flex; justify-content: space-between; padding: 7px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+  .fs-row:last-child { border: none; }
+  .fs-label { color: var(--ink3); }
+  .fs-val { font-weight: 500; color: var(--ink); }
+  .fs-total { background: var(--surface2); }
+  .fs-total .fs-label { font-weight: 600; color: var(--ink); }
+  .fs-total .fs-val { font-weight: 700; color: var(--gold-dk); font-size: 14px; }
+
+  /* PALLETS INDICATOR */
+  .pallets-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .pp-1 { background: rgba(45,106,79,.1); color: var(--success); border: 1px solid rgba(45,106,79,.2); }
+  .pp-2 { background: rgba(139,69,19,.1); color: var(--warn); border: 1px solid rgba(139,69,19,.2); }
+
+  /* RFQ BUTTON */
+  .rfq-btn { width: 100%; padding: 13px; border-radius: var(--radius); border: none; background: var(--gold); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; letter-spacing: .04em; transition: opacity .15s; font-family: 'Cormorant Garamond', serif; font-size: 16px; }
+  .rfq-btn:hover { opacity: .9; }
+  .rfq-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .basket-footer { padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface); }
+
+  /* LEGEND */
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--ink3); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,.1); }
+
+  .indicator-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+
+  /* PALLET SPLIT NOTE */
+  .split-note { font-size: 11px; color: var(--warn); background: rgba(139,69,19,.06); border: 1px solid rgba(139,69,19,.15); border-radius: var(--radius); padding: 7px 10px; margin-bottom: 10px; display: none; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div>
+    <div class="nav-brand">RAPID FINE WINE</div>
+    <div class="nav-sub">B2B Trade Portal · UAE Market · DDP</div>
+  </div>
+  <span class="nav-badge">Trade Access Only</span>
+</nav>
+
+<div class="layout">
+
+  <!-- CATALOGUE -->
+  <div class="catalogue">
+    <div class="panel-title">Fine Wine Catalogue</div>
+    <div class="panel-sub">Prices shown per bottle · Air freight · UAE Delivered Duty Paid · Indicative at 1 case</div>
+
+    <div id="catalogue-list"></div>
+  </div>
+
+  <!-- BASKET -->
+  <aside class="basket">
+    <div class="basket-head">
+      <div class="basket-title">
+        Inquiry Basket
+        <span class="basket-count" id="basket-count">0</span>
+      </div>
+    </div>
+
+    <div class="basket-body">
+
+      <!-- PALLET VISUALISER -->
+      <div class="pallet-section">
+        <div class="pallet-label">Live Pallet Configuration</div>
+
+        <div id="pallet-wrap" class="pallet-wrap">
+          <div class="pallet-viz">
+            <div id="pallet-empty" class="empty-label">Add wines to see pallet loading</div>
+            <div id="pallets-container" style="display:none"></div>
+          </div>
+        </div>
+
+        <div id="split-note" class="split-note">⚠ Order spans 2 pallets — height exceeds 160 cm</div>
+
+        <div class="meters">
+          <div class="meter">
+            <div class="meter-label">Height</div>
+            <div class="meter-bar-track">
+              <div class="meter-bar-fill" id="height-bar" style="width:0%;background:var(--success)"></div>
+            </div>
+            <div class="meter-val" id="height-val">— cm</div>
+            <div class="meter-max">max 160 cm</div>
+          </div>
+          <div class="meter">
+            <div class="meter-label">Weight</div>
+            <div class="meter-bar-track">
+              <div class="meter-bar-fill" id="weight-bar" style="width:0%;background:var(--success)"></div>
+            </div>
+            <div class="meter-val" id="weight-val">— kg</div>
+            <div class="meter-max">max 1,000 kg</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BASKET ITEMS -->
+      <div class="pallet-label" style="margin-top:14px">Order Lines</div>
+      <div class="basket-items" id="basket-items">
+        <div class="empty-basket">Your basket is empty</div>
+      </div>
+
+      <!-- FREIGHT SUMMARY -->
+      <div class="pallet-label">Freight Summary</div>
+      <div class="freight-summary" id="freight-summary">
+        <div class="fs-row"><span class="fs-label">Total cases</span><span class="fs-val" id="fs-cases">—</span></div>
+        <div class="fs-row"><span class="fs-label">Total bottles</span><span class="fs-val" id="fs-bottles">—</span></div>
+        <div class="fs-row"><span class="fs-label">Chargeable weight</span><span class="fs-val" id="fs-cw">—</span></div>
+        <div class="fs-row"><span class="fs-label">Pallets</span><span class="fs-val" id="fs-pallets">—</span></div>
+        <div class="fs-row fs-total"><span class="fs-label">Sell price range</span><span class="fs-val" id="fs-range">—</span></div>
+      </div>
+
+    </div>
+
+    <div class="basket-footer">
+      <button class="rfq-btn" id="rfq-btn" disabled>Submit Inquiry / RFQ</button>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+// ── Carton profiles ────────────────────────────────────────────────────────
+const CARTONS = {
+  CC6:       {l:33,  w:23,  h:26,   wt:10.0, btl:6,  cpl:20, color:'#85B7EB', dark:'#5A94D3'},
+  CC12:      {l:35,  w:26,  h:33.5, wt:19.0, btl:12, cpl:10, color:'#7DC4D0', dark:'#4FA8B8'},
+  CC3:       {l:33,  w:29,  h:10,   wt:4.5,  btl:3,  cpl:10, color:'#A8D4F5', dark:'#7AB8E8'},
+  OWC6:      {l:53.4,w:33,  h:11.5, wt:10.5, btl:6,  cpl:5,  color:'#97C459', dark:'#6EA234'},
+  OWC12:     {l:50,  w:33,  h:22,   wt:20.0, btl:12, cpl:5,  color:'#7DB87A', dark:'#559452'},
+  OWC3:      {l:33,  w:26,  h:10,   wt:5.0,  btl:3,  cpl:11, color:'#B8D98A', dark:'#8BBF5A'},
+  'OWC3x1.5L':{l:42, w:36,  h:14,   wt:10.5, btl:3,  cpl:6,  color:'#D4A857', dark:'#B08030'},
+  'OWC6x1.5L':{l:39, w:36,  h:23,   wt:21.0, btl:6,  cpl:6,  color:'#C4925A', dark:'#A07040'},
+};
+
+// ── Catalogue ──────────────────────────────────────────────────────────────
+const CATALOGUE = [
+  {id:1, name:'Tignanello',             vintage:'2019', region:'Tuscany, Italy',    carton:'CC6',  eur:129,  emoji:'🍷'},
+  {id:2, name:'Opus One',               vintage:'2022', region:'Napa Valley, USA',  carton:'CC6',  eur:225,  emoji:'🍾'},
+  {id:3, name:'Ch. Cantemerle',         vintage:'2018', region:'Haut-Médoc, France',carton:'OWC6', eur:20,   emoji:'🏰'},
+  {id:4, name:'Joseph Phelps Insignia', vintage:'2018', region:'Napa Valley, USA',  carton:'CC6',  eur:210,  emoji:'🍷'},
+  {id:5, name:'Sassicaia',              vintage:'2019', region:'Tuscany, Italy',    carton:'CC6',  eur:235,  emoji:'🌿'},
+  {id:6, name:'Ch. Margaux',            vintage:'2013', region:'Margaux, France',   carton:'CC6',  eur:350,  emoji:'🏰'},
+  {id:7, name:'Ch. Lynch Bages',        vintage:'2018', region:'Pauillac, France',  carton:'CC6',  eur:99,   emoji:'🍷'},
+  {id:8, name:'Masseto',                vintage:'2013', region:'Tuscany, Italy',    carton:'CC3',  eur:760,  emoji:'💎'},
+  {id:9, name:'Pichon Comtesse',        vintage:'2006', region:'Pauillac, France',  carton:'CC12', eur:135,  emoji:'🏰'},
+  {id:10,name:'Vega Sicilia Valbuena',  vintage:'2021', region:'Ribera del Duero',  carton:'CC3',  eur:130,  emoji:'🌟'},
+  {id:11,name:'Solaia',                 vintage:'2000', region:'Tuscany, Italy',    carton:'CC6',  eur:265,  emoji:'🍷'},
+  {id:12,name:'Lynch Bages Magnum',     vintage:'2018', region:'Pauillac, France',  carton:'OWC3x1.5L',eur:195,emoji:'🍾'},
+];
+
+// ── Settings ───────────────────────────────────────────────────────────────
+const CFG = {
+  eurAed: 4.35, usdAed: 3.67,
+  inland: 240, local: 3500, transport: 1000,
+  fsc: 1.20, duty: 0.50,
+  minWt: 230,
+  bands: [{min:0,rate:5.20},{min:45,rate:5.20},{min:100,rate:3.50},{min:300,rate:3.30},{min:500,rate:2.90},{min:750,rate:2.65}],
+  m1:0.10, m2:0.08, m3:0.06,
+  P_L:80, P_W:120, P_H:14.4, P_WT:15, MAX_H:160, VOL_DIV:6000
+};
+
+let basket = {}; // id → cases
+
+// ── Pricing ────────────────────────────────────────────────────────────────
+function getMargin(eur){ return eur<100?CFG.m1:eur<=200?CFG.m2:CFG.m3; }
+
+function getRate(billable){
+  let rate = CFG.bands[0].rate;
+  for(const b of CFG.bands){ if(billable>=b.min) rate=b.rate; }
+  return rate;
+}
+
+function palletCalc(){
+  const items = Object.entries(basket).filter(([id,cs])=>cs>0);
+  if(!items.length) return null;
+
+  let totalCaseVol=0, totalCaseWt=0, totalCases=0, totalBottles=0;
+  for(const [id,cases] of items){
+    const sku = CATALOGUE.find(s=>s.id===+id);
+    const c = CARTONS[sku.carton];
+    totalCaseVol += cases * c.l * c.w * c.h;
+    totalCaseWt  += cases * c.wt;
+    totalCases   += cases;
+    totalBottles += cases * c.btl;
+  }
+
+  const pbaseVol = CFG.P_L * CFG.P_W * CFG.P_H;
+  const totalVol = totalCaseVol + pbaseVol;
+  const volCW = totalVol / CFG.VOL_DIV;
+  const actCW = totalCaseWt + CFG.P_WT;
+  const cw = Math.max(volCW, actCW);
+  const effH = totalCaseVol / (CFG.P_L * CFG.P_W);
+  const totalLoadedH = CFG.P_H + effH;
+  const pallets = Math.max(1, Math.ceil(totalLoadedH / CFG.MAX_H));
+
+  // For multi-pallet: total CW scales proportionally
+  const totalCW = pallets === 1 ? cw : cw; // already summed
+  const billable = Math.max(totalCW, CFG.minWt);
+  const rate = getRate(billable);
+  const freightUSD = billable * (rate + CFG.fsc);
+  const freightAED = freightUSD * CFG.usdAed;
+  const freightPerCase = freightAED / totalCases;
+  const inlandPerCase = (CFG.inland / totalCases) * CFG.eurAed;
+  const localPerCase = CFG.local / totalCases;
+  const transpPerCase = CFG.transport / totalCases;
+
+  return {
+    totalCaseVol, totalCaseWt, totalCases, totalBottles,
+    volCW, actCW, cw, effH, totalLoadedH, pallets,
+    billable, rate, freightAED, freightPerCase,
+    inlandPerCase, localPerCase, transpPerCase
+  };
+}
+
+function getSellPrice(sku, p){
+  if(!p) return null;
+  const c = CARTONS[sku.carton];
+  const goodsAed = sku.eur * c.btl * CFG.eurAed;
+  const dutyBase = goodsAed + p.freightPerCase;
+  const duty = dutyBase * CFG.duty;
+  const postDuty = dutyBase + duty + p.inlandPerCase;
+  const totalCost = postDuty + p.localPerCase + p.transpPerCase;
+  const margin = getMargin(sku.eur);
+  const sellCase = totalCost / (1 - margin);
+  const sellBtl = sellCase / c.btl;
+  return sellBtl;
+}
+
+function fmt(n, d=0){ return n.toLocaleString('en-AE', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+function fmtAED(n){ return 'AED ' + fmt(n, 0); }
+
+// ── Render catalogue ──────────────────────────────────────────────────────
+function renderCatalogue(){
+  const p = palletCalc();
+  const el = document.getElementById('catalogue-list');
+  el.innerHTML = CATALOGUE.map(sku => {
+    const c = CARTONS[sku.carton];
+    const cases = basket[sku.id] || 0;
+    const sellBtl = getSellPrice(sku, p);
+    const priceStr = sellBtl ? `AED ${fmt(sellBtl, 0)}` : `AED ${fmt((sku.eur * c.btl * CFG.eurAed * 1.5 + 200) / c.btl / (1-getMargin(sku.eur)), 0)}*`;
+
+    return `<div class="sku-card">
+      <div class="sku-swatch" style="background:${c.color}20">${sku.emoji}</div>
+      <div class="sku-info">
+        <div class="sku-name">${sku.name}</div>
+        <div class="sku-meta">${sku.vintage} · ${sku.region}</div>
+        <div><span class="carton-tag">${sku.carton} · ${c.btl} btl/case</span></div>
+      </div>
+      <div style="text-align:right">
+        <div class="sku-price">${priceStr}</div>
+        <div class="sku-price-sub">per bottle · DDP UAE</div>
+        <div class="qty-ctrl" style="margin-top:8px;justify-content:flex-end">
+          <button class="qty-btn" onclick="changeQty(${sku.id},-1)">−</button>
+          <span class="qty-val">${cases}</span>
+          <button class="qty-btn" onclick="changeQty(${sku.id},1)">+</button>
+        </div>
+        ${cases>0?`<div style="font-size:10px;color:var(--ink3);margin-top:3px">${cases} case${cases>1?'s':''} · ${cases*c.btl} btl</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Pallet visualiser ─────────────────────────────────────────────────────
+function buildLayerData(){
+  // Build layer-by-layer data for visualisation
+  // Group items by carton type
+  const byCarton = {};
+  for(const [id, cases] of Object.entries(basket)){
+    if(cases<=0) continue;
+    const sku = CATALOGUE.find(s=>s.id===+id);
+    byCarton[sku.carton] = (byCarton[sku.carton]||0) + cases;
+  }
+
+  // Build layer sequence: sort by layer height desc for stability
+  const layers = [];
+  const sorted = Object.entries(byCarton).sort((a,b)=> CARTONS[b[0]].h - CARTONS[a[0]].h);
+
+  for(const [carton, totalCases] of sorted){
+    const c = CARTONS[carton];
+    let rem = totalCases;
+    while(rem > 0){
+      const onLayer = Math.min(rem, c.cpl);
+      layers.push({carton, cases:onLayer, fullLayer: onLayer===c.cpl, h:c.h, color:c.color, dark:c.dark, cpl:c.cpl});
+      rem -= onLayer;
+    }
+  }
+  return layers;
+}
+
+function renderPalletViz(p){
+  const emptyEl = document.getElementById('pallet-empty');
+  const container = document.getElementById('pallets-container');
+
+  if(!p || p.totalCases === 0){
+    emptyEl.style.display = 'block';
+    container.style.display = 'none';
+    document.getElementById('height-bar').style.width = '0%';
+    document.getElementById('weight-bar').style.width = '0%';
+    document.getElementById('height-val').textContent = '— cm';
+    document.getElementById('weight-val').textContent = '— kg';
+    document.getElementById('split-note').style.display = 'none';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+  container.style.display = 'block';
+
+  const layers = buildLayerData();
+  const splitNote = document.getElementById('split-note');
+
+  // Split layers across pallets based on height
+  const MAX_CARGO_H = CFG.MAX_H - CFG.P_H;
+  let palletGroups = [[]];
+  let currentH = 0;
+
+  for(const layer of layers){
+    if(currentH + layer.h > MAX_CARGO_H && palletGroups[palletGroups.length-1].length > 0){
+      palletGroups.push([]);
+      currentH = 0;
+    }
+    palletGroups[palletGroups.length-1].push(layer);
+    currentH += layer.h;
+  }
+
+  splitNote.style.display = p.pallets > 1 ? 'block' : 'none';
+
+  // Render each pallet
+  container.innerHTML = palletGroups.map((pLayers, pi) => {
+    const palletH = CFG.P_H + pLayers.reduce((a,l)=>a+l.h, 0);
+    const palletWt = pLayers.reduce((a,l)=>a+l.cases*CARTONS[l.carton].wt, 0) + CFG.P_WT;
+    const heightPct = Math.min(100, (palletH / CFG.MAX_H) * 100);
+
+    // Build layer HTML — bottom to top
+    const layerHTML = [...pLayers].reverse().map(layer => {
+      const c = CARTONS[layer.carton];
+      // Show case blocks proportional to CPL
+      const blockW = `${Math.max(8, Math.floor(100/Math.min(layer.cpl, 10)) - 1)}%`;
+      const blockH = `${Math.max(12, Math.min(28, layer.h * 0.7))}px`;
+      const blocks = Array.from({length: Math.min(layer.cases, 10)}, (_, i) =>
+        `<div class="case-block" style="flex:1;height:${blockH};background:${layer.color};border-color:${layer.dark}33">${i===0?layer.carton:''}</div>`
+      ).join('');
+      const overflow = layer.cases > 10 ? `<div style="font-size:9px;color:var(--ink3);align-self:center;flex-shrink:0">+${layer.cases-10}</div>` : '';
+      return `<div class="layer-row">${blocks}${overflow}</div>`;
+    }).join('');
+
+    return `<div class="pallet-card" style="margin-bottom:${pi<palletGroups.length-1?'10px':'0'}">
+      <div class="pallet-num">Pallet ${pi+1} of ${palletGroups.length} · ${pLayers.reduce((a,l)=>a+l.cases,0)} cases · ${palletH.toFixed(1)}cm · ${palletWt.toFixed(0)}kg</div>
+      <div class="layer-stack">
+        ${layerHTML}
+        <div class="pallet-base"><span class="pallet-base-label">EURO PALLET 80×120cm</span></div>
+      </div>
+      <div style="margin-top:6px">
+        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${heightPct.toFixed(1)}%;background:${heightPct>90?'#C0392B':heightPct>75?'#E67E22':'var(--success)'};border-radius:2px;transition:width .4s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--ink3);margin-top:2px">
+          <span>${palletH.toFixed(1)} cm loaded</span><span>max 160 cm</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Update global meters
+  const totalH = p.totalLoadedH;
+  const totalWt = p.actCW;
+  const hPct = Math.min(100, (totalH / CFG.MAX_H) * 100);
+  const wPct = Math.min(100, (totalWt / 1000) * 100);
+
+  document.getElementById('height-bar').style.width = hPct + '%';
+  document.getElementById('height-bar').style.background = hPct > 90 ? '#C0392B' : hPct > 75 ? '#E67E22' : 'var(--success)';
+  document.getElementById('height-val').textContent = totalH.toFixed(1) + ' cm';
+  document.getElementById('height-val').className = 'meter-val ' + (hPct > 90 ? 'meter-warn' : 'meter-ok');
+
+  document.getElementById('weight-bar').style.width = wPct + '%';
+  document.getElementById('weight-bar').style.background = wPct > 90 ? '#C0392B' : wPct > 75 ? '#E67E22' : 'var(--success)';
+  document.getElementById('weight-val').textContent = totalWt.toFixed(0) + ' kg';
+  document.getElementById('weight-val').className = 'meter-val ' + (wPct > 90 ? 'meter-warn' : 'meter-ok');
+}
+
+// ── Render basket ──────────────────────────────────────────────────────────
+function renderBasket(){
+  const p = palletCalc();
+  const items = Object.entries(basket).filter(([id,cs])=>cs>0);
+  const count = items.reduce((a,[,cs])=>a+cs,0);
+
+  document.getElementById('basket-count').textContent = count;
+  document.getElementById('rfq-btn').disabled = count === 0;
+
+  const biEl = document.getElementById('basket-items');
+  if(!items.length){
+    biEl.innerHTML = '<div class="empty-basket">Your basket is empty</div>';
+  } else {
+    let minPrice = Infinity, maxPrice = 0;
+    biEl.innerHTML = items.map(([id,cases]) => {
+      const sku = CATALOGUE.find(s=>s.id===+id);
+      const c = CARTONS[sku.carton];
+      const sellBtl = getSellPrice(sku, p) || 0;
+      if(sellBtl > maxPrice) maxPrice = sellBtl;
+      if(sellBtl < minPrice) minPrice = sellBtl;
+      return `<div class="basket-item">
+        <div>
+          <div class="bi-name">${sku.name} ${sku.vintage}</div>
+          <div class="bi-detail">${cases} case${cases>1?'s':''} · ${cases*c.btl} btl · ${sku.carton}</div>
+        </div>
+        <div class="bi-price">
+          AED ${fmt(sellBtl,0)}/btl
+        </div>
+      </div>`;
+    }).join('');
+
+    // Freight summary
+    document.getElementById('fs-cases').textContent = p.totalCases + ' cases';
+    document.getElementById('fs-bottles').textContent = p.totalBottles + ' bottles';
+    document.getElementById('fs-cw').textContent = p.cw.toFixed(0) + ' kg';
+    document.getElementById('fs-pallets').innerHTML = `<span class="pallets-pill ${p.pallets>1?'pp-2':'pp-1'}">${p.pallets} pallet${p.pallets>1?'s':''}</span>`;
+    document.getElementById('fs-range').textContent = minPrice < Infinity ?
+      (minPrice===maxPrice ? `AED ${fmt(minPrice,0)}` : `AED ${fmt(minPrice,0)} – ${fmt(maxPrice,0)}/btl`) : '—';
+  }
+  if(!items.length){
+    document.getElementById('fs-cases').textContent = '—';
+    document.getElementById('fs-bottles').textContent = '—';
+    document.getElementById('fs-cw').textContent = '—';
+    document.getElementById('fs-pallets').textContent = '—';
+    document.getElementById('fs-range').textContent = '—';
+  }
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+function changeQty(id, delta){
+  basket[id] = Math.max(0, (basket[id]||0) + delta);
+  if(basket[id]===0) delete basket[id];
+  update();
+}
+
+function update(){
+  const p = palletCalc();
+  renderPalletViz(p);
+  renderBasket();
+  renderCatalogue();
+}
+
+// Init
+renderCatalogue();
+renderBasket();
+renderPalletViz(null);
+</script>
+</body>
+</html>
