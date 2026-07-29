@@ -285,7 +285,7 @@ function stepChannel(){
   mi.innerHTML=`<h2>Delivery Options</h2><div class="msub">Two quick choices and we'll calculate your shipment pricing</div>
   <div class="step-label">Step 1 — Customs channel</div>
   <div class="opts">
-    <div class="opt ${sel.duty==='DDP'?'sel':''}" onclick="sel.duty='DDP';stepChannel()"><div class="opt-t">Duty Paid (DDP UAE)</div><div class="opt-d">Delivered duty paid — 12% customs included, cleared into UAE mainland</div></div>
+    <div class="opt ${sel.duty==='DDP'?'sel':''}" onclick="sel.duty='DDP';stepChannel()"><div class="opt-t">Duty Paid (DDP UAE)</div><div class="opt-d">Delivered duty paid — customs duty included, cleared into UAE mainland</div></div>
     <div class="opt ${sel.duty==='BONDED'?'sel':''}" onclick="sel.duty='BONDED';stepChannel()"><div class="opt-t">Duty Free (Bonded)</div><div class="opt-d">ExW Jebel Ali bonded — no customs duty, for re-export & duty-free channels</div></div>
   </div>
   <div class="step-label">Step 2 — Freight mode</div>
