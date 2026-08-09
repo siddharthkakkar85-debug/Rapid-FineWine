@@ -158,11 +158,11 @@ sea:{inland:3.00,frt:0.67,local:0.50,transp:0.25}};
 // 2-key carton profiles: pack|size
 const PROF={
 "CC3|0.75":{l:33,w:29,h:10,wt:4.5,btl:3},"CC3|0.375":{l:33,w:29,h:10,wt:4.5,btl:3},
-"CC6|0.75":{l:33,w:23,h:26,wt:10,btl:6},"CC6|0.375":{l:33,w:23,h:26,wt:10,btl:6},
-"CC12|0.75":{l:35,w:26,h:33.5,wt:19,btl:12},"CC12|0.375":{l:35,w:26,h:33.5,wt:19,btl:12},
+"CC6|0.75":{l:33,w:26,h:18,wt:10,btl:6},"CC6|0.375":{l:33,w:26,h:18,wt:10,btl:6},
+"CC12|0.75":{l:32,w:25,h:31,wt:15,btl:12},"CC12|0.375":{l:32,w:25,h:31,wt:15,btl:12},
 "CC3|1.5":{l:42,w:36,h:14,wt:10.5,btl:3},
-"CC6|1.5":{l:39,w:36,h:23,wt:21,btl:6},
-"CC12|1.5":{l:35,w:26,h:33.5,wt:19,btl:12}};
+"CC6|1.5":{l:39,w:36,h:24,wt:13,btl:6},
+"CC12|1.5":{l:32,w:25,h:31,wt:15,btl:12}};
 function prof(p){return PROF[p.pack+"|"+p.size]||PROF[p.pack+"|0.75"]||PROF["CC6|0.75"]}
 
 let basket={}; // id -> cases
