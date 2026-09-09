@@ -40,6 +40,16 @@
   .chbtn{padding:3px 8px;background:var(--card2);color:var(--ink3);border:none;cursor:pointer;font-weight:600;letter-spacing:.02em}
   .chbtn.active{background:var(--gold);color:var(--bg)}
   .chbtn.active.bonded{background:var(--green);color:var(--bg)}
+  .chbtn.active.ajman{background:#C97B3D;color:var(--bg)}
+  .chbadge.ajman{background:rgba(201,123,61,.2);color:#E0A876}
+  .livetag{font-size:10px;color:var(--gold-lt);margin-top:2px;font-weight:600}
+  .cline-price{font-size:10.5px;color:var(--gold-lt);margin-top:2px;font-weight:600}
+  .liveprice{background:linear-gradient(135deg,rgba(201,168,76,.14),rgba(26,58,107,.25));border:1px solid var(--gold);border-radius:var(--r);padding:12px 14px;margin-top:4px}
+  .lp-label{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);font-weight:700}
+  .lp-note{color:var(--ink3);font-weight:400;text-transform:none;letter-spacing:0}
+  .lp-total{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--ink);margin:4px 0 2px}
+  .lp-avg{font-size:11px;color:var(--ink2)}
+  .lp-disclaimer{font-size:9.5px;color:var(--ink3);font-style:italic;margin-top:6px}
   .rowctl{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
   .qty{display:flex;align-items:center;gap:5px}
   .qbtn{width:22px;height:22px;border-radius:50%;border:1px solid var(--bd2);background:var(--card2);cursor:pointer;font-size:14px;color:var(--gold-lt);display:flex;align-items:center;justify-content:center}
@@ -141,10 +151,17 @@
     <div class="manifest" id="manifest" style="display:none">
       <div class="mrow"><span>Total cases</span><b id="m-cases">—</b></div>
       <div class="mrow"><span>· Duty Paid (DDP)</span><b id="m-ddp">—</b></div>
+      <div class="mrow"><span>· Ajman Bonded</span><b id="m-ajman">—</b></div>
       <div class="mrow"><span>· Duty Free (Bonded)</span><b id="m-bonded">—</b></div>
       <div class="mrow"><span>Total bottles</span><b id="m-btl">—</b></div>
       <div class="mrow"><span>Estimated pallets</span><b id="m-plt">—</b></div>
       <div class="mrow"><span>Est. gross weight</span><b id="m-wt">—</b></div>
+    </div>
+    <div class="liveprice" id="liveprice" style="display:none">
+      <div class="lp-label">LIVE INDICATIVE TOTAL <span class="lp-note">(Air freight, per line's channel)</span></div>
+      <div class="lp-total" id="lp-total">—</div>
+      <div class="lp-avg" id="lp-avg">—</div>
+      <div class="lp-disclaimer">Estimate only — final pricing confirmed at Submit Enquiry</div>
     </div>
   </div>
   <div class="cart-foot">
@@ -164,13 +181,15 @@ const CAT = [{"id":1,"n":"A.BOISSON BOURG CLOUS PERRONS","v":"2021","s":0.75,"p"
 // ── T9 Engine — confirmed rates ──
 const CFG={
   eurAed:4.35, usdAed:3.67,
-  inlandEur:300, docEur:200,
+  originEur:975,                          // Hellmann actual, consolidated
   fsc:0.4248, duty:0.12, minWt:220,
   bands:[[0,6.074],[45,5.674],[100,3.584],[300,3.436],[500,3.15],[1000,2.873]],
-  destOnCarriageMin:750, destOnCarriagePerKg:0.55,
-  destHandling:1100, destDOFee:650, destCustoms:250, destStorage:350,
-  ajmanPerCase:10.00,
-  m:[.15,.15,.10],
+  // Jebel Ali local charges — AAA Freight, real itemised structure, applies to ALL channels
+  jaDeliveryOrder:250, jaDeconsolidation:450, jaAirlineHandlingPerKg:0.28,
+  jaCustoms:200, jaDocumentation:100, jaDeliveryToJebelAli:650,
+  // Transfer to Ajman (still bonded) — AAA/local transporter, DDP or AJMAN BONDED only
+  ajmanHandlingOut:500, ajmanDocumentation:1800, ajmanTrucking:800, ajmanArrivalHandling:200,
+  m:[.10,.10,.08],                        // margin tiers: <€100, €100-200, >€200
   P_L:80,P_W:120,P_H:14.4,P_WT:15,MAXWT:1000,MAXH:160,VDIV:6000,
   sea:{inland:3.00,frt:0.67,local:0.50,transp:0.25}
 };
@@ -224,23 +243,36 @@ function render(){
   document.getElementById('count').textContent=f.length.toLocaleString()+" of "+CAT.length.toLocaleString()+" listings";
   document.getElementById('list').innerHTML=f.slice(0,shown).map(p=>{
     const ch = rowChannel[p.id]||'DDP';
-    const csD = cartQty(p.id,'DDP'), csB = cartQty(p.id,'BONDED');
-    const activeCs = ch==='DDP'?csD:csB;
+    const csD = cartQty(p.id,'DDP'), csA = cartQty(p.id,'AJMAN BONDED'), csB = cartQty(p.id,'BONDED');
+    const activeCs = ch==='DDP'?csD:(ch==='AJMAN BONDED'?csA:csB);
     const action = p.t==='E'
       ? '<span class="enq">Enquire only</span>'
       : `<div class="rowctl">
           <div class="chsel">
             <button class="chbtn ${ch==='DDP'?'active':''}" onclick="setCh(${p.id},'DDP')">DDP</button>
+            <button class="chbtn ${ch==='AJMAN BONDED'?'active ajman':''}" onclick="setCh(${p.id},'AJMAN BONDED')">Ajman Bonded</button>
             <button class="chbtn ${ch==='BONDED'?'active bonded':''}" onclick="setCh(${p.id},'BONDED')">Bonded</button>
           </div>
           <div class="qty"><button class="qbtn" onclick="chg(${p.id},-1)">−</button><span class="qv">${activeCs}</span><button class="qbtn" onclick="chg(${p.id},1)">+</button></div>
         </div>`;
-    const extra = (csD>0&&csB>0) ? `<div class="pmeta">DDP:${csD} · Bonded:${csB}</div>` : '';
-    return `<tr><td><div class="pname">${p.n}</div><div class="pmeta">${p.a}</div>${extra}</td>
+    const badges=[];
+    if(csD>0)badges.push(`DDP:${csD}`); if(csA>0)badges.push(`Ajman:${csA}`); if(csB>0)badges.push(`Bonded:${csB}`);
+    const extra = badges.length>1 ? `<div class="pmeta">${badges.join(' · ')}</div>` : '';
+    const livePrice = activeCs>0 ? liveLinePrice(p,ch) : null;
+    const liveTag = livePrice!==null ? `<div class="livetag">≈ ${aed2(livePrice)}/btl</div>` : '';
+    return `<tr><td><div class="pname">${p.n}</div><div class="pmeta">${p.a}</div>${extra}${liveTag}</td>
     <td>${p.v}</td><td><span class="tag">${sizeLabel(p.s)}</span></td>
     <td><span class="tag">${p.p} · ${prof(p).btl}btl</span></td>
     <td style="text-align:right">${action}</td></tr>`}).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--ink3);padding:20px">No matches</td></tr>';
   document.getElementById('more').style.display=f.length>shown?'block':'none';
+}
+
+// Live indicative per-bottle price for a single row, given its current channel — Air freight, whole-cart context
+function liveLinePrice(p,ch){
+  if(!Object.keys(basket).length) return null;
+  const r = priceOrder('AIR');
+  const line = r.lines.find(l=>l.p.id===p.id && l.ch===ch);
+  return line ? line.bt : null;
 }
 function showMore(){shown+=60;render()}
 ['q','fsize','ftier'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{shown=60;render()}));
@@ -256,18 +288,18 @@ function chg(id,d){
 function findProduct(id){ return CAT.find(x=>x.id==id); }
 
 function manifest(){
-  let cases=0,ddpCases=0,bondedCases=0,btl=0,vol=0,wt=0;
+  let cases=0,ddpCases=0,ajmanCases=0,bondedCases=0,btl=0,vol=0,wt=0;
   for(const[key,cs]of Object.entries(basket)){
     const [idStr,ch]=key.split('_'); const p=findProduct(idStr); if(!p)continue;
     const c=prof(p);
     cases+=cs;btl+=cs*c.btl;vol+=cs*c.l*c.w*c.h;wt+=cs*c.wt;
-    if(ch==='DDP')ddpCases+=cs; else bondedCases+=cs;
+    if(ch==='DDP')ddpCases+=cs; else if(ch==='AJMAN BONDED')ajmanCases+=cs; else bondedCases+=cs;
   }
   const effH=vol/(CFG.P_L*CFG.P_W);
   const pByH=Math.max(1,Math.ceil(effH/(CFG.MAXH-CFG.P_H)));
   const pByW=Math.max(1,Math.ceil(wt/(CFG.MAXWT-CFG.P_WT)));
   const plt=cases?Math.max(pByH,pByW):0;
-  return{cases,ddpCases,bondedCases,btl,vol,wt,effH,plt};
+  return{cases,ddpCases,ajmanCases,bondedCases,btl,vol,wt,effH,plt};
 }
 
 function renderCart(){
@@ -278,20 +310,40 @@ function renderCart(){
   document.getElementById('submit').disabled=!m.cases;
   const el=document.getElementById('clines');
   if(!items.length){el.innerHTML='<div class="empty">No items yet — add cases from the catalogue</div>';
-    document.getElementById('manifest').style.display='none';return}
+    document.getElementById('manifest').style.display='none';
+    document.getElementById('liveprice').style.display='none';
+    return}
+
+  // Live indicative pricing — recomputed on every render, Air freight, respects each line's own channel
+  const r = priceOrder('AIR');
+  const priceByKey={};
+  r.lines.forEach(l=>{priceByKey[l.p.id+'_'+l.ch]=l;});
+
+  const badge=ch=>ch==='DDP'?'ddp':(ch==='AJMAN BONDED'?'ajman':'bonded');
+  const label=ch=>ch==='DDP'?'DDP':(ch==='AJMAN BONDED'?'AJMAN BONDED':'BONDED');
+
   el.innerHTML=items.map(([key,cs])=>{
     const [idStr,ch]=key.split('_'); const p=findProduct(idStr); if(!p)return'';
     const c=prof(p);
-    return `<div class="cline"><div><div class="cline-name"><span class="chbadge ${ch==='DDP'?'ddp':'bonded'}">${ch==='DDP'?'DDP':'BONDED'}</span>${p.n} ${p.v}</div>
-    <div class="cline-detail">${cs} case${cs>1?"s":""} · ${cs*c.btl} btl · ${p.p} ${sizeLabel(p.s)}</div></div>
+    const l=priceByKey[key];
+    const priceStr = l ? `<div class="cline-price">≈ ${aed2(l.bt)}/btl · ${aed(l.sc*cs)}</div>` : '';
+    return `<div class="cline"><div><div class="cline-name"><span class="chbadge ${badge(ch)}">${label(ch)}</span>${p.n} ${p.v}</div>
+    <div class="cline-detail">${cs} case${cs>1?"s":""} · ${cs*c.btl} btl · ${p.p} ${sizeLabel(p.s)}</div>
+    ${priceStr}</div>
     <button class="cx" onclick="chgKey('${key}',-999)">✕</button></div>`}).join('');
+
   document.getElementById('manifest').style.display='block';
   document.getElementById('m-cases').textContent=m.cases;
   document.getElementById('m-ddp').textContent=m.ddpCases;
+  document.getElementById('m-ajman').textContent=m.ajmanCases;
   document.getElementById('m-bonded').textContent=m.bondedCases;
   document.getElementById('m-btl').textContent=m.btl;
   document.getElementById('m-plt').textContent="~"+m.plt;
   document.getElementById('m-wt').textContent=Math.round(m.wt+m.plt*CFG.P_WT)+" kg";
+
+  document.getElementById('liveprice').style.display='block';
+  document.getElementById('lp-total').textContent=aed(r.orderTotal);
+  document.getElementById('lp-avg').textContent=aed2(r.orderTotal/m.btl)+"/btl avg";
 }
 function chgKey(key,d){ basket[key]=Math.max(0,(basket[key]||0)+d); if(!basket[key])delete basket[key]; saveCart(); render(); renderCart(); }
 
@@ -308,7 +360,7 @@ function priceOrder(mode){
     const [idStr,ch]=key.split('_'); return {p:findProduct(idStr),cs,ch};
   }).filter(x=>x.p);
   const m=manifest();
-  let lines=[],orderTotal=0,ddpTotal=0,bondedTotal=0,fi={};
+  let lines=[],orderTotal=0,ddpTotal=0,bondedTotal=0,ajmanBondedTotal=0,fi={};
 
   if(mode==='AIR'){
     const totalVol=m.vol+m.plt*CFG.P_L*CFG.P_W*CFG.P_H;
@@ -319,28 +371,33 @@ function priceOrder(mode){
     let rate=CFG.bands[0][1];for(const[mn,r]of CFG.bands){if(billable>=mn)rate=r}
     const frtAed=billable*(rate+CFG.fsc)*CFG.usdAed;
     const fpc=frtAed/m.cases;
-    // Shared, whole-shipment, channel-agnostic per-case costs
-    const onCarriage=Math.max(CFG.destOnCarriageMin,billable*CFG.destOnCarriagePerKg);
-    // Shared, whole-shipment costs — includes Customs Clearance (airport release fee,
-    // applies once goods clear the airport regardless of DDP/Bonded destination)
-    const sharedTotal = onCarriage + CFG.destHandling + CFG.destDOFee + CFG.destStorage + CFG.destCustoms
-                       + CFG.inlandEur*CFG.eurAed + CFG.docEur*CFG.eurAed;
-    const sharedPerCase = sharedTotal/m.cases;
-    fi={cw,billable,plt:m.plt,onCarriage,sharedTotal};
+    // Origin — Hellmann actual, EUR native, shared across all cases regardless of channel
+    const originPerCase=(CFG.originEur*CFG.eurAed)/m.cases;
+    // Jebel Ali local charges — AAA Freight, real itemised, shared across ALL cases/channels
+    const jaAirlineHandling = CFG.jaAirlineHandlingPerKg*billable;
+    const jaTotal = CFG.jaDeliveryOrder+CFG.jaDeconsolidation+jaAirlineHandling
+                  + CFG.jaCustoms+CFG.jaDocumentation+CFG.jaDeliveryToJebelAli;
+    const jaPerCase = jaTotal/m.cases;
+    // Transfer to Ajman (still bonded) — real itemised, flat per shipment, DDP or AJMAN BONDED only
+    const ajmanTotal = CFG.ajmanHandlingOut+CFG.ajmanDocumentation+CFG.ajmanTrucking+CFG.ajmanArrivalHandling;
+    fi={cw,billable,plt:m.plt,jaTotal,ajmanTotal};
 
     for(const{p,cs,ch}of items){
       const c=prof(p);
       const goods=p.e*c.btl*CFG.eurAed;
       const dutyBase=goods+fpc;
       const isDDP = ch==='DDP';
+      const movesToAjman = (ch==='DDP'||ch==='AJMAN BONDED');
       const duty=isDDP?dutyBase*CFG.duty:0;
-      const ajmanPart = isDDP?CFG.ajmanPerCase:0;
-      const tc=dutyBase+duty+sharedPerCase+ajmanPart;
+      const ajmanPerCase = movesToAjman?(ajmanTotal/m.cases):0; // approx per-case share for this line's cases
+      const tc=dutyBase+duty+originPerCase+jaPerCase+ajmanPerCase;
       const mg=p.e<100?CFG.m[0]:p.e<=200?CFG.m[1]:CFG.m[2];
       const sc=tc/(1-mg); const bt=sc/c.btl;
       lines.push({p,cs,ch,btl:c.btl,sc,bt});
       orderTotal+=sc*cs;
-      if(isDDP) ddpTotal+=sc*cs; else bondedTotal+=sc*cs;
+      if(isDDP) ddpTotal+=sc*cs;
+      else if(ch==='AJMAN BONDED') ajmanBondedTotal+=sc*cs;
+      else bondedTotal+=sc*cs;
     }
   }else{
     for(const{p,cs,ch}of items){
@@ -349,7 +406,7 @@ function priceOrder(mode){
       const base=goods+CFG.sea.frt;
       const isDDP = ch==='DDP';
       const dy=isDDP?base*CFG.duty:0;
-      const tc=base+dy+CFG.sea.inland+CFG.sea.local+CFG.sea.transp+(isDDP?CFG.ajmanPerCase:0);
+      const tc=base+dy+CFG.sea.inland+CFG.sea.local+CFG.sea.transp;
       const mg=p.e<100?CFG.m[0]:p.e<=200?CFG.m[1]:CFG.m[2];
       const bt=tc/(1-mg); const sc=bt*c.btl;
       lines.push({p,cs,ch,btl:c.btl,sc,bt});
@@ -358,7 +415,7 @@ function priceOrder(mode){
     }
     fi={plt:m.plt};
   }
-  return{lines,orderTotal,ddpTotal,bondedTotal,m,fi};
+  return{lines,orderTotal,ddpTotal,bondedTotal,ajmanBondedTotal,m,fi};
 }
 function aed(n){return "AED "+n.toLocaleString('en-AE',{maximumFractionDigits:0})}
 function aed2(n){return "AED "+n.toLocaleString('en-AE',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -394,17 +451,20 @@ function reveal(){
       <div class="rstat"><div class="rstat-l">Pallets</div><div class="rstat-v">${r.m.plt}</div></div>
       <div class="rstat"><div class="rstat-l">Mode</div><div class="rstat-v">Reefer</div></div>
       <div class="rstat"><div class="rstat-l">Bottles</div><div class="rstat-v">${r.m.btl}</div></div></div>`;
-  const rows = r.lines.map(l=>`<tr><td><span class="chbadge ${l.ch==='DDP'?'ddp':'bonded'}">${l.ch==='DDP'?'DDP':'BONDED'}</span>${l.p.n} ${l.p.v} <span class="pmeta">(${l.p.p} ${sizeLabel(l.p.s)})</span></td><td>${l.cs}</td>
+  const badge=ch=>ch==='DDP'?'ddp':(ch==='AJMAN BONDED'?'ajman':'bonded');
+  const label=ch=>ch==='DDP'?'DDP':(ch==='AJMAN BONDED'?'AJMAN BONDED':'BONDED');
+  const rows = r.lines.map(l=>`<tr><td><span class="chbadge ${badge(l.ch)}">${label(l.ch)}</span>${l.p.n} ${l.p.v} <span class="pmeta">(${l.p.p} ${sizeLabel(l.p.s)})</span></td><td>${l.cs}</td>
   <td class="price-cell">${aed2(l.bt)}</td><td class="price-cell">${aed(l.sc)}</td><td class="price-cell">${aed(l.sc*l.cs)}</td></tr>`).join('');
-  mi.innerHTML=`<h2>Your Indicative Pricing</h2><div class="msub">${selMode==='AIR'?'Air Freight':'Sea Freight'} · Mixed Duty Paid / Duty Free order</div>
+  mi.innerHTML=`<h2>Your Indicative Pricing</h2><div class="msub">${selMode==='AIR'?'Air Freight':'Sea Freight'} · Mixed-channel order</div>
   ${stats}
   <table class="ptable"><thead><tr><th>Wine</th><th>Cases</th><th style="text-align:right">Per bottle</th><th style="text-align:right">Per case</th><th style="text-align:right">Line total</th></tr></thead><tbody>
   ${rows}
   <tr class="subtot-row"><td colspan="4">Duty Paid (DDP) subtotal</td><td class="price-cell">${aed(r.ddpTotal)}</td></tr>
-  <tr class="subtot-row"><td colspan="4">Duty Free (Bonded) subtotal</td><td class="price-cell">${aed(r.bondedTotal)}</td></tr>
+  <tr class="subtot-row"><td colspan="4">Ajman Bonded subtotal</td><td class="price-cell">${aed(r.ajmanBondedTotal||0)}</td></tr>
+  <tr class="subtot-row"><td colspan="4">Duty Free (Jebel Ali Bonded) subtotal</td><td class="price-cell">${aed(r.bondedTotal)}</td></tr>
   <tr class="total-row"><td colspan="4">Order total (${r.m.cases} cases · ${r.m.btl} bottles)</td><td class="price-cell">${aed(r.orderTotal)}</td></tr>
   </tbody></table>
-  <div class="assumption">Shared shipment costs (freight, on-carriage, handling, DO fee, storage, inland, documentation) are split across all cases. Import Customs Clearance is a fixed airport release fee and applies to every case regardless of channel. Only Duty and the Ajman transfer apply exclusively to Duty Paid lines.</div>
+  <div class="assumption">Origin and Jebel Ali local charges are shared across every case regardless of channel. Duty applies to Duty Paid lines only. The Ajman transfer applies to Duty Paid and Ajman Bonded lines (goods physically move to Ajman); Jebel Ali Bonded lines never incur it.</div>
   <div class="indicative">Pricing shown is <b>indicative</b>, based on your complete shipment configuration. Final pricing and availability are confirmed on submission.</div>
   <div class="modal-actions">
     <button class="btn3" onclick="cancelOrder()">Cancel Order</button>
