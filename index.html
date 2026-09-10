@@ -581,6 +581,17 @@ if(window.netlifyIdentity){
   netlifyIdentity.on('init', user => { user ? showApp(user) : showGate(); });
   netlifyIdentity.on('login', user => { showApp(user); netlifyIdentity.close(); });
   netlifyIdentity.on('logout', () => { showGate(); });
+
+  // The widget's automatic detection of invite/confirmation/recovery tokens in the URL
+  // is unreliable in practice (documented Netlify issue) — so we check explicitly and
+  // force the correct modal open ourselves, once Identity has finished initialising.
+  const hash = window.location.hash;
+  if(hash && /invite_token=|confirmation_token=|recovery_token=/.test(hash)){
+    netlifyIdentity.on('init', () => {
+      netlifyIdentity.open(hash.includes('recovery_token=') ? 'login' : 'signup');
+    });
+  }
+
   netlifyIdentity.init();
 } else {
   // Identity script failed to load — fail safe by keeping the gate up rather than exposing the catalogue
