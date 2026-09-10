@@ -129,6 +129,12 @@
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--gold);border-radius:var(--r);padding:10px 18px;font-size:12px;color:var(--ink);opacity:0;transition:all .25s;z-index:200;pointer-events:none}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
+<script>
+// Capture the URL hash IMMEDIATELY, before the Identity widget script below
+// gets any chance to run and potentially clear it. This is the earliest
+// possible point in the page's execution.
+window.__capturedAuthHash = window.location.hash;
+</script>
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
@@ -142,8 +148,25 @@
     <p class="login-copy">This catalogue is available to verified trade partners only. Log in with the account you were invited to, to continue.</p>
     <button class="btn" style="max-width:220px;margin:18px auto 0" onclick="netlifyIdentity.open('login')">Log In</button>
     <div class="login-foot">Don't have access yet? Contact RapidFineWine to be invited.</div>
+    <div id="diagBox2" style="margin-top:22px;padding:12px;background:#0D1B2E;border:1px solid #2A3A55;border-radius:6px;font-family:monospace;font-size:10.5px;color:#8A93A8;text-align:left;line-height:1.7;word-break:break-all"></div>
   </div>
 </div>
+
+<script>
+window.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(()=>{
+    const box = document.getElementById('diagBox2');
+    if(!box) return;
+    box.innerHTML =
+      'Captured hash (before widget loaded):<br>"' + (window.__capturedAuthHash||'(empty)') + '"<br><br>' +
+      'Live hash (now):<br>"' + (window.location.hash||'(empty)') + '"<br><br>' +
+      'Token type detected: ' + (
+        /recovery_token=/.test(window.__capturedAuthHash||'') ? 'RECOVERY' :
+        /invite_token=/.test(window.__capturedAuthHash||'') ? 'INVITE' :
+        /confirmation_token=/.test(window.__capturedAuthHash||'') ? 'CONFIRMATION' : 'NONE');
+  }, 600);
+});
+</script>
 
 <form name="enquiry" netlify netlify-honeypot="bot-field" hidden>
   <input type="text" name="reference"><input type="text" name="mode">
@@ -586,8 +609,10 @@ if(window.netlifyIdentity){
 
   // Invite/confirmation/recovery token handling — wrapped so any failure here
   // can NEVER block netlifyIdentity.init() or the basic Log In button below.
+  // Uses the hash captured BEFORE the widget script loaded, since the widget
+  // itself may clear window.location.hash as part of its own processing.
   try {
-    const hash = window.location.hash;
+    const hash = window.__capturedAuthHash || window.location.hash;
     if(hash && /invite_token=|confirmation_token=|recovery_token=/.test(hash)){
       netlifyIdentity.on('init', () => {
         try { netlifyIdentity.open(hash.indexOf('recovery_token=')>-1 ? 'login' : 'signup'); }
