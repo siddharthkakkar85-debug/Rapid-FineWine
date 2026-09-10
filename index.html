@@ -17,6 +17,11 @@
   .brand{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:700;letter-spacing:.08em;color:var(--gold)}
   .brand-sub{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3)}
   .badge{font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(224,180,92,.1);color:var(--warn);border:1px solid rgba(224,180,92,.3);font-weight:600}
+  .navright{display:flex;align-items:center;gap:14px}
+  .modesel{display:flex;border:1px solid var(--bd2);border-radius:20px;overflow:hidden}
+  .modebtn{padding:7px 16px;background:var(--card);color:var(--ink3);border:none;cursor:pointer;font-size:12.5px;font-weight:600;font-family:'Inter'}
+  .modebtn.active{background:var(--gold);color:var(--bg)}
+  .modebtn:not(.active):hover{background:var(--card2)}
   .layout{display:grid;grid-template-columns:1fr 360px;min-height:calc(100vh - 55px)}
   @media(max-width:900px){.layout{grid-template-columns:1fr}.cart{position:fixed;right:0;top:55px;width:340px;transform:translateX(100%);transition:transform .25s;z-index:40}.cart.open{transform:none}}
   .main{padding:22px 26px;overflow-y:auto}
@@ -124,7 +129,13 @@
 
 <nav class="nav">
   <div><div class="brand">RAPID FINE WINE</div><div class="brand-sub">B2B Trade Portal · UAE</div></div>
-  <span class="badge">INTERNAL TRIAL</span>
+  <div class="navright">
+    <div class="modesel">
+      <button class="modebtn active" id="mode-air" onclick="setFreightMode('AIR')">✈ Air Freight</button>
+      <button class="modebtn" id="mode-sea" onclick="setFreightMode('SEA')">🚢 Sea Freight</button>
+    </div>
+    <span class="badge">INTERNAL TRIAL</span>
+  </div>
 </nav>
 
 <div class="layout">
@@ -158,7 +169,7 @@
       <div class="mrow"><span>Est. gross weight</span><b id="m-wt">—</b></div>
     </div>
     <div class="liveprice" id="liveprice" style="display:none">
-      <div class="lp-label">LIVE INDICATIVE TOTAL <span class="lp-note">(Air freight, per line's channel)</span></div>
+      <div class="lp-label">LIVE INDICATIVE TOTAL <span class="lp-note" id="lp-mode">(Air freight, per line's channel)</span></div>
       <div class="lp-total" id="lp-total">—</div>
       <div class="lp-avg" id="lp-avg">—</div>
       <div class="lp-disclaimer">Estimate only — final pricing confirmed at Submit Enquiry</div>
@@ -191,7 +202,7 @@ const CFG={
   ajmanHandlingOut:500, ajmanDocumentation:1800, ajmanTrucking:800, ajmanArrivalHandling:200,
   m:[.10,.10,.08],                        // margin tiers: <€100, €100-200, >€200
   P_L:80,P_W:120,P_H:14.4,P_WT:15,MAXWT:1000,MAXH:160,VDIV:6000,
-  sea:{inland:3.00,frt:0.67,local:0.50,transp:0.25}
+  sea:{inlandEurPerBtl:5.00,freightEurPerBtl:2.50,localAedPerBtl:0.50,transpAedPerBtl:0.25}
 };
 
 const PROF={
@@ -216,7 +227,16 @@ try{ const saved = localStorage.getItem(CART_KEY); if(saved) basket = JSON.parse
 function saveCart(){ try{ localStorage.setItem(CART_KEY, JSON.stringify(basket)); }catch(e){} }
 
 let shown=60;
-let rowChannel = {}; // per-row UI toggle state, id -> 'DDP'|'BONDED'
+let rowChannel = {}; // per-row UI
+let freightMode='AIR';
+function setFreightMode(mode){
+  freightMode=mode;
+  document.getElementById('mode-air').classList.toggle('active',mode==='AIR');
+  document.getElementById('mode-sea').classList.toggle('active',mode==='SEA');
+  render(); renderCart();
+  toast(mode==='AIR'?'Showing Air Freight pricing':'Showing Sea Freight pricing');
+}
+// per-row toggle state, id -> 'DDP'|'BONDED'
 
 function toast(msg){
   const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
@@ -245,14 +265,18 @@ function render(){
     const ch = rowChannel[p.id]||'DDP';
     const csD = cartQty(p.id,'DDP'), csA = cartQty(p.id,'AJMAN BONDED'), csB = cartQty(p.id,'BONDED');
     const activeCs = ch==='DDP'?csD:(ch==='AJMAN BONDED'?csA:csB);
+    // Sea ships direct to Ajman — no Jebel Ali leg exists, so only DDP / Bonded(Ajman) are physically real.
+    // Air routes via Jebel Ali first, so the full three-way choice applies.
+    const chButtons = freightMode==='SEA'
+      ? `<button class="chbtn ${ch==='DDP'?'active':''}" onclick="setCh(${p.id},'DDP')">DDP</button>
+         <button class="chbtn ${(ch==='AJMAN BONDED'||ch==='BONDED')?'active ajman':''}" onclick="setCh(${p.id},'AJMAN BONDED')">Bonded (Ajman)</button>`
+      : `<button class="chbtn ${ch==='DDP'?'active':''}" onclick="setCh(${p.id},'DDP')">DDP</button>
+         <button class="chbtn ${ch==='AJMAN BONDED'?'active ajman':''}" onclick="setCh(${p.id},'AJMAN BONDED')">Ajman Bonded</button>
+         <button class="chbtn ${ch==='BONDED'?'active bonded':''}" onclick="setCh(${p.id},'BONDED')">Bonded</button>`;
     const action = p.t==='E'
       ? '<span class="enq">Enquire only</span>'
       : `<div class="rowctl">
-          <div class="chsel">
-            <button class="chbtn ${ch==='DDP'?'active':''}" onclick="setCh(${p.id},'DDP')">DDP</button>
-            <button class="chbtn ${ch==='AJMAN BONDED'?'active ajman':''}" onclick="setCh(${p.id},'AJMAN BONDED')">Ajman Bonded</button>
-            <button class="chbtn ${ch==='BONDED'?'active bonded':''}" onclick="setCh(${p.id},'BONDED')">Bonded</button>
-          </div>
+          <div class="chsel">${chButtons}</div>
           <div class="qty"><button class="qbtn" onclick="chg(${p.id},-1)">−</button><span class="qv">${activeCs}</span><button class="qbtn" onclick="chg(${p.id},1)">+</button></div>
         </div>`;
     const badges=[];
@@ -270,7 +294,7 @@ function render(){
 // Live indicative per-bottle price for a single row, given its current channel — Air freight, whole-cart context
 function liveLinePrice(p,ch){
   if(!Object.keys(basket).length) return null;
-  const r = priceOrder('AIR');
+  const r = priceOrder(freightMode);
   const line = r.lines.find(l=>l.p.id===p.id && l.ch===ch);
   return line ? line.bt : null;
 }
@@ -315,12 +339,20 @@ function renderCart(){
     return}
 
   // Live indicative pricing — recomputed on every render, Air freight, respects each line's own channel
-  const r = priceOrder('AIR');
+  const r = priceOrder(freightMode);
   const priceByKey={};
   r.lines.forEach(l=>{priceByKey[l.p.id+'_'+l.ch]=l;});
 
-  const badge=ch=>ch==='DDP'?'ddp':(ch==='AJMAN BONDED'?'ajman':'bonded');
-  const label=ch=>ch==='DDP'?'DDP':(ch==='AJMAN BONDED'?'AJMAN BONDED':'BONDED');
+  const badge=ch=>{
+    if(ch==='DDP')return 'ddp';
+    if(freightMode==='SEA')return 'ajman'; // Air distinguishes Jebel Ali vs Ajman bonded (real cost diff); Sea has only one bonded state
+    return ch==='AJMAN BONDED'?'ajman':'bonded';
+  };
+  const label=ch=>{
+    if(ch==='DDP')return 'DDP';
+    if(freightMode==='SEA')return 'BONDED (AJMAN)';
+    return ch==='AJMAN BONDED'?'AJMAN BONDED':'BONDED (JEBEL ALI)';
+  };
 
   el.innerHTML=items.map(([key,cs])=>{
     const [idStr,ch]=key.split('_'); const p=findProduct(idStr); if(!p)return'';
@@ -344,6 +376,7 @@ function renderCart(){
   document.getElementById('liveprice').style.display='block';
   document.getElementById('lp-total').textContent=aed(r.orderTotal);
   document.getElementById('lp-avg').textContent=aed2(r.orderTotal/m.btl)+"/btl avg";
+  document.getElementById('lp-mode').textContent="("+(freightMode==='AIR'?'Air freight':'Sea freight')+", per line's channel)";
 }
 function chgKey(key,d){ basket[key]=Math.max(0,(basket[key]||0)+d); if(!basket[key])delete basket[key]; saveCart(); render(); renderCart(); }
 
@@ -400,18 +433,24 @@ function priceOrder(mode){
       else bondedTotal+=sc*cs;
     }
   }else{
+    // Sea freight — flat per-bottle structure, confirmed rates
+    // Duty base = product cost + inland + ocean freight ONLY (local/transport added after, same principle as Air)
+    const inlandPerBtl = CFG.sea.inlandEurPerBtl*CFG.eurAed;
+    const freightPerBtl = CFG.sea.freightEurPerBtl*CFG.eurAed;
     for(const{p,cs,ch}of items){
       const c=prof(p);
-      const goods=p.e*CFG.eurAed;
-      const base=goods+CFG.sea.frt;
+      const goodsPerBtl=p.e*CFG.eurAed;
+      const dutyBase=goodsPerBtl+inlandPerBtl+freightPerBtl;
       const isDDP = ch==='DDP';
-      const dy=isDDP?base*CFG.duty:0;
-      const tc=base+dy+CFG.sea.inland+CFG.sea.local+CFG.sea.transp;
+      const duty=isDDP?dutyBase*CFG.duty:0;
+      const tcPerBtl=dutyBase+duty+CFG.sea.localAedPerBtl+CFG.sea.transpAedPerBtl;
       const mg=p.e<100?CFG.m[0]:p.e<=200?CFG.m[1]:CFG.m[2];
-      const bt=tc/(1-mg); const sc=bt*c.btl;
+      const bt=tcPerBtl/(1-mg); const sc=bt*c.btl;
       lines.push({p,cs,ch,btl:c.btl,sc,bt});
       orderTotal+=sc*cs;
-      if(isDDP) ddpTotal+=sc*cs; else bondedTotal+=sc*cs;
+      if(isDDP) ddpTotal+=sc*cs;
+      else if(ch==='AJMAN BONDED') ajmanBondedTotal+=sc*cs;
+      else bondedTotal+=sc*cs;
     }
     fi={plt:m.plt};
   }
@@ -421,21 +460,8 @@ function aed(n){return "AED "+n.toLocaleString('en-AE',{maximumFractionDigits:0}
 function aed2(n){return "AED "+n.toLocaleString('en-AE',{minimumFractionDigits:2,maximumFractionDigits:2})}
 
 let selMode=null, lastReveal=null;
-function openEnquiry(){selMode=null;stepMode()}
-function stepMode(){
-  const mi=document.getElementById('modal-inner');
-  mi.innerHTML=`<h2>Freight Mode</h2><div class="msub">Your duty channel is already set per wine in your cart. One more choice:</div>
-  <div class="step-label">Freight mode</div>
-  <div class="opts">
-    <div class="opt ${selMode==='AIR'?'sel':''}" onclick="selMode='AIR';stepMode()"><div class="opt-t">Air Freight</div><div class="opt-d">3–5 days, palletised, temperature-managed</div></div>
-    <div class="opt ${selMode==='SEA'?'sel':''}" onclick="selMode='SEA';stepMode()"><div class="opt-t">Sea Freight</div><div class="opt-d">Reefer container, 3–4 weeks, best rate for volume</div></div>
-  </div>
-  <div class="modal-actions">
-    <button class="btn2" onclick="closeModal()">Save &amp; Continue Later</button>
-    <button class="btn" ${selMode?'':'disabled'} onclick="reveal()">Show Pricing</button>
-  </div>`;
-  document.getElementById('modal').classList.add('open');
-}
+function openEnquiry(){selMode=freightMode; reveal();}
+function stepMode(){ selMode=freightMode; reveal(); }
 function reveal(){
   const r=priceOrder(selMode);
   lastReveal=r;
@@ -451,8 +477,16 @@ function reveal(){
       <div class="rstat"><div class="rstat-l">Pallets</div><div class="rstat-v">${r.m.plt}</div></div>
       <div class="rstat"><div class="rstat-l">Mode</div><div class="rstat-v">Reefer</div></div>
       <div class="rstat"><div class="rstat-l">Bottles</div><div class="rstat-v">${r.m.btl}</div></div></div>`;
-  const badge=ch=>ch==='DDP'?'ddp':(ch==='AJMAN BONDED'?'ajman':'bonded');
-  const label=ch=>ch==='DDP'?'DDP':(ch==='AJMAN BONDED'?'AJMAN BONDED':'BONDED');
+  const badge=ch=>{
+    if(ch==='DDP')return 'ddp';
+    if(freightMode==='SEA')return 'ajman'; // Air distinguishes Jebel Ali vs Ajman bonded (real cost diff); Sea has only one bonded state
+    return ch==='AJMAN BONDED'?'ajman':'bonded';
+  };
+  const label=ch=>{
+    if(ch==='DDP')return 'DDP';
+    if(freightMode==='SEA')return 'BONDED (AJMAN)';
+    return ch==='AJMAN BONDED'?'AJMAN BONDED':'BONDED (JEBEL ALI)';
+  };
   const rows = r.lines.map(l=>`<tr><td><span class="chbadge ${badge(l.ch)}">${label(l.ch)}</span>${l.p.n} ${l.p.v} <span class="pmeta">(${l.p.p} ${sizeLabel(l.p.s)})</span></td><td>${l.cs}</td>
   <td class="price-cell">${aed2(l.bt)}</td><td class="price-cell">${aed(l.sc)}</td><td class="price-cell">${aed(l.sc*l.cs)}</td></tr>`).join('');
   mi.innerHTML=`<h2>Your Indicative Pricing</h2><div class="msub">${selMode==='AIR'?'Air Freight':'Sea Freight'} · Mixed-channel order</div>
@@ -460,11 +494,15 @@ function reveal(){
   <table class="ptable"><thead><tr><th>Wine</th><th>Cases</th><th style="text-align:right">Per bottle</th><th style="text-align:right">Per case</th><th style="text-align:right">Line total</th></tr></thead><tbody>
   ${rows}
   <tr class="subtot-row"><td colspan="4">Duty Paid (DDP) subtotal</td><td class="price-cell">${aed(r.ddpTotal)}</td></tr>
-  <tr class="subtot-row"><td colspan="4">Ajman Bonded subtotal</td><td class="price-cell">${aed(r.ajmanBondedTotal||0)}</td></tr>
-  <tr class="subtot-row"><td colspan="4">Duty Free (Jebel Ali Bonded) subtotal</td><td class="price-cell">${aed(r.bondedTotal)}</td></tr>
+  ${selMode==='SEA'
+    ? `<tr class="subtot-row"><td colspan="4">Bonded (Ajman) subtotal</td><td class="price-cell">${aed((r.ajmanBondedTotal||0)+r.bondedTotal)}</td></tr>`
+    : `<tr class="subtot-row"><td colspan="4">Ajman Bonded subtotal</td><td class="price-cell">${aed(r.ajmanBondedTotal||0)}</td></tr>
+  <tr class="subtot-row"><td colspan="4">Duty Free (Jebel Ali Bonded) subtotal</td><td class="price-cell">${aed(r.bondedTotal)}</td></tr>`}
   <tr class="total-row"><td colspan="4">Order total (${r.m.cases} cases · ${r.m.btl} bottles)</td><td class="price-cell">${aed(r.orderTotal)}</td></tr>
   </tbody></table>
-  <div class="assumption">Origin and Jebel Ali local charges are shared across every case regardless of channel. Duty applies to Duty Paid lines only. The Ajman transfer applies to Duty Paid and Ajman Bonded lines (goods physically move to Ajman); Jebel Ali Bonded lines never incur it.</div>
+  <div class="assumption">${selMode==='SEA'
+    ? "Sea shipments land directly in Ajman port — there is no Jebel Ali leg and no separate transfer cost. Duty applies to Duty Paid lines only; Bonded lines are held duty-free in Ajman."
+    : "Origin and Jebel Ali local charges are shared across every case regardless of channel. Duty applies to Duty Paid lines only. The Ajman transfer applies to Duty Paid and Ajman Bonded lines (goods physically move to Ajman); Jebel Ali Bonded lines never incur it."}</div>
   <div class="indicative">Pricing shown is <b>indicative</b>, based on your complete shipment configuration. Final pricing and availability are confirmed on submission.</div>
   <div class="modal-actions">
     <button class="btn3" onclick="cancelOrder()">Cancel Order</button>
