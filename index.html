@@ -582,15 +582,17 @@ if(window.netlifyIdentity){
   netlifyIdentity.on('login', user => { showApp(user); netlifyIdentity.close(); });
   netlifyIdentity.on('logout', () => { showGate(); });
 
-  // The widget's automatic detection of invite/confirmation/recovery tokens in the URL
-  // is unreliable in practice (documented Netlify issue) — so we check explicitly and
-  // force the correct modal open ourselves, once Identity has finished initialising.
-  const hash = window.location.hash;
-  if(hash && /invite_token=|confirmation_token=|recovery_token=/.test(hash)){
-    netlifyIdentity.on('init', () => {
-      netlifyIdentity.open(hash.includes('recovery_token=') ? 'login' : 'signup');
-    });
-  }
+  // Invite/confirmation/recovery token handling — wrapped so any failure here
+  // can NEVER block netlifyIdentity.init() or the basic Log In button below.
+  try {
+    const hash = window.location.hash;
+    if(hash && /invite_token=|confirmation_token=|recovery_token=/.test(hash)){
+      netlifyIdentity.on('init', () => {
+        try { netlifyIdentity.open(hash.indexOf('recovery_token=')>-1 ? 'login' : 'signup'); }
+        catch(e) { console.error('Auto-open on invite failed (non-fatal):', e); }
+      });
+    }
+  } catch(e) { console.error('Invite-token detection failed (non-fatal):', e); }
 
   netlifyIdentity.init();
 } else {
