@@ -138,10 +138,43 @@
     <div class="login-sub">B2B Trade Portal · UAE</div>
     <h1 class="login-title">Trade Access Only</h1>
     <p class="login-copy">This catalogue is available to verified trade partners only. Log in with the account you were invited to, to continue.</p>
-    <button class="btn" style="max-width:220px;margin:18px auto 0" onclick="netlifyIdentity.open('login')">Log In</button>
+    <button class="btn" style="max-width:220px;margin:18px auto 0" id="loginBtn" onclick="attemptLogin()">Log In</button>
     <div class="login-foot">Don't have access yet? Contact RapidFineWine to be invited.</div>
+    <div id="diagBox" style="margin-top:22px;padding:12px;background:#0D1B2E;border:1px solid #2A3A55;border-radius:6px;font-family:monospace;font-size:10.5px;color:#8A93A8;text-align:left;line-height:1.6"></div>
   </div>
 </div>
+
+<script>
+// ── Temporary on-page diagnostic — reports status directly on screen ──
+function diagLog(msg){
+  const box = document.getElementById('diagBox');
+  const time = new Date().toLocaleTimeString();
+  box.innerHTML += `[${time}] ${msg}<br>`;
+}
+function attemptLogin(){
+  diagLog('Log In clicked.');
+  if(!window.netlifyIdentity){
+    diagLog('ERROR: window.netlifyIdentity is undefined. The Identity widget script did not load.');
+    return;
+  }
+  diagLog('netlifyIdentity object exists. Calling .open("login")...');
+  try{
+    netlifyIdentity.open('login');
+    diagLog('open() call completed with no error thrown.');
+    setTimeout(()=>{
+      const iframe = document.querySelector('iframe[id^="netlify-identity-widget"]');
+      diagLog(iframe ? 'Widget iframe found in page.' : 'WARNING: No widget iframe found in page after open().');
+    }, 800);
+  }catch(e){
+    diagLog('ERROR thrown calling open(): '+e.message);
+  }
+}
+window.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(()=>{
+    diagLog(window.netlifyIdentity ? 'Page loaded — Identity widget script: LOADED' : 'Page loaded — Identity widget script: NOT LOADED');
+  }, 500);
+});
+</script>
 
 <form name="enquiry" netlify netlify-honeypot="bot-field" hidden>
   <input type="text" name="reference"><input type="text" name="mode">
